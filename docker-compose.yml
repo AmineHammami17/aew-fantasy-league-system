@@ -1,0 +1,267 @@
+version: '3.8'
+
+services:
+  # Infrastructure Services
+  postgres:
+    image: postgres:15-alpine
+    container_name: aew-postgres
+    environment:
+      POSTGRES_DB: aew_fantasy_league
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql
+    networks:
+      - aew-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: aew-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - aew-network
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: aew-kafka
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    networks:
+      - aew-network
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: aew-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - aew-network
+
+  # Microservices
+  eureka-server:
+    build: ./services/eureka-server
+    container_name: aew-eureka-server
+    ports:
+      - "8761:8761"
+    networks:
+      - aew-network
+
+  config-server:
+    build: ./services/config-server
+    container_name: aew-config-server
+    ports:
+      - "8888:8888"
+    depends_on:
+      - eureka-server
+    networks:
+      - aew-network
+
+  api-gateway:
+    build: ./services/api-gateway
+    container_name: aew-api-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - eureka-server
+      - config-server
+    networks:
+      - aew-network
+
+  auth-service:
+    build: ./services/auth-service
+    container_name: aew-auth-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      - postgres
+      - redis
+      - eureka-server
+      - config-server
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/auth_db
+      SPRING_DATASOURCE_USERNAME: auth_user
+      SPRING_DATASOURCE_PASSWORD: auth_password
+      SPRING_REDIS_HOST: redis
+    networks:
+      - aew-network
+
+  user-service:
+    build: ./services/user-service
+    container_name: aew-user-service
+    ports:
+      - "8082:8082"
+    depends_on:
+      - postgres
+      - redis
+      - eureka-server
+      - config-server
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/user_db
+      SPRING_DATASOURCE_USERNAME: user_user
+      SPRING_DATASOURCE_PASSWORD: user_password
+      SPRING_REDIS_HOST: redis
+    networks:
+      - aew-network
+
+  wrestler-service:
+    build: ./services/wrestler-service
+    container_name: aew-wrestler-service
+    ports:
+      - "8083:8083"
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+      - eureka-server
+      - config-server
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/wrestler_db
+      SPRING_DATASOURCE_USERNAME: wrestler_user
+      SPRING_DATASOURCE_PASSWORD: wrestler_password
+      SPRING_REDIS_HOST: redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    networks:
+      - aew-network
+
+  team-service:
+    build: ./services/team-service
+    container_name: aew-team-service
+    ports:
+      - "8084:8084"
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+      - eureka-server
+      - config-server
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/team_db
+      SPRING_DATASOURCE_USERNAME: team_user
+      SPRING_DATASOURCE_PASSWORD: team_password
+      SPRING_REDIS_HOST: redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    networks:
+      - aew-network
+
+  league-service:
+    build: ./services/league-service
+    container_name: aew-league-service
+    ports:
+      - "8085:8085"
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+      - eureka-server
+      - config-server
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/league_db
+      SPRING_DATASOURCE_USERNAME: league_user
+      SPRING_DATASOURCE_PASSWORD: league_password
+      SPRING_REDIS_HOST: redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    networks:
+      - aew-network
+
+  match-service:
+    build: ./services/match-service
+    container_name: aew-match-service
+    ports:
+      - "8086:8086"
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+      - eureka-server
+      - config-server
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/match_db
+      SPRING_DATASOURCE_USERNAME: match_user
+      SPRING_DATASOURCE_PASSWORD: match_password
+      SPRING_REDIS_HOST: redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    networks:
+      - aew-network
+
+  scoring-service:
+    build: ./services/scoring-service
+    container_name: aew-scoring-service
+    ports:
+      - "8087:8087"
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+      - eureka-server
+      - config-server
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/scoring_db
+      SPRING_DATASOURCE_USERNAME: scoring_user
+      SPRING_DATASOURCE_PASSWORD: scoring_password
+      SPRING_REDIS_HOST: redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    networks:
+      - aew-network
+
+  leaderboard-service:
+    build: ./services/leaderboard-service
+    container_name: aew-leaderboard-service
+    ports:
+      - "8088:8088"
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+      - eureka-server
+      - config-server
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/leaderboard_db
+      SPRING_DATASOURCE_USERNAME: leaderboard_user
+      SPRING_DATASOURCE_PASSWORD: leaderboard_password
+      SPRING_REDIS_HOST: redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    networks:
+      - aew-network
+
+  notification-service:
+    build: ./services/notification-service
+    container_name: aew-notification-service
+    ports:
+      - "8089:8089"
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+      - eureka-server
+      - config-server
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/notification_db
+      SPRING_DATASOURCE_USERNAME: notification_user
+      SPRING_DATASOURCE_PASSWORD: notification_password
+      SPRING_REDIS_HOST: redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    networks:
+      - aew-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  aew-network:
+    driver: bridge
