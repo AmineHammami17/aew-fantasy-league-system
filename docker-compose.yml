@@ -8,14 +8,39 @@ services:
     environment:
       POSTGRES_DB: aew_fantasy_league
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: amine123
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -h localhost"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     networks:
       - aew-network
+
+  # Runs once after Postgres is up: fixes "permission denied for schema public" (PostgreSQL 15+)
+  postgres-schema-fix:
+    image: postgres:15-alpine
+    container_name: aew-postgres-schema-fix
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: amine123
+      PGHOST: postgres
+      PGUSER: postgres
+    volumes:
+      - ./scripts/run-schema-fix.sh:/run-schema-fix.sh
+    # Set password in command so it is not lost when script is piped; .pgpass in script is backup
+    entrypoint: ["/bin/sh", "-c", "export PGPASSWORD=amine123 PGHOST=postgres PGUSER=postgres; tr -d '\\r' < /run-schema-fix.sh | /bin/sh"]
+    networks:
+      - aew-network
+    restart: "no"
 
   redis:
     image: redis:7-alpine
@@ -27,28 +52,29 @@ services:
     networks:
       - aew-network
 
-  kafka:
-    image: confluentinc/cp-kafka:latest
-    container_name: aew-kafka
-    environment:
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    ports:
-      - "9092:9092"
-    depends_on:
-      - zookeeper
-    networks:
-      - aew-network
-
   zookeeper:
-    image: confluentinc/cp-zookeeper:latest
+    image: confluentinc/cp-zookeeper:7.5.0
     container_name: aew-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
+    networks:
+      - aew-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: aew-kafka
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
     networks:
       - aew-network
 
@@ -68,6 +94,8 @@ services:
       - "8888:8888"
     depends_on:
       - eureka-server
+    environment:
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka/
     networks:
       - aew-network
 
@@ -79,6 +107,8 @@ services:
     depends_on:
       - eureka-server
       - config-server
+    environment:
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka/
     networks:
       - aew-network
 
@@ -88,11 +118,16 @@ services:
     ports:
       - "8081:8081"
     depends_on:
-      - postgres
-      - redis
-      - eureka-server
-      - config-server
+      postgres-schema-fix:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+      eureka-server:
+        condition: service_started
+      config-server:
+        condition: service_started
     environment:
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/auth_db
       SPRING_DATASOURCE_USERNAME: auth_user
       SPRING_DATASOURCE_PASSWORD: auth_password
@@ -104,13 +139,18 @@ services:
     build: ./services/user-service
     container_name: aew-user-service
     ports:
-      - "8082:8082"
+      - "8092:8082"
     depends_on:
-      - postgres
-      - redis
-      - eureka-server
-      - config-server
+      postgres-schema-fix:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+      eureka-server:
+        condition: service_started
+      config-server:
+        condition: service_started
     environment:
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/user_db
       SPRING_DATASOURCE_USERNAME: user_user
       SPRING_DATASOURCE_PASSWORD: user_password
@@ -124,12 +164,18 @@ services:
     ports:
       - "8083:8083"
     depends_on:
-      - postgres
-      - redis
-      - kafka
-      - eureka-server
-      - config-server
+      postgres-schema-fix:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+      kafka:
+        condition: service_started
+      eureka-server:
+        condition: service_started
+      config-server:
+        condition: service_started
     environment:
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/wrestler_db
       SPRING_DATASOURCE_USERNAME: wrestler_user
       SPRING_DATASOURCE_PASSWORD: wrestler_password
@@ -144,12 +190,18 @@ services:
     ports:
       - "8084:8084"
     depends_on:
-      - postgres
-      - redis
-      - kafka
-      - eureka-server
-      - config-server
+      postgres-schema-fix:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+      kafka:
+        condition: service_started
+      eureka-server:
+        condition: service_started
+      config-server:
+        condition: service_started
     environment:
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/team_db
       SPRING_DATASOURCE_USERNAME: team_user
       SPRING_DATASOURCE_PASSWORD: team_password
@@ -164,12 +216,18 @@ services:
     ports:
       - "8085:8085"
     depends_on:
-      - postgres
-      - redis
-      - kafka
-      - eureka-server
-      - config-server
+      postgres-schema-fix:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+      kafka:
+        condition: service_started
+      eureka-server:
+        condition: service_started
+      config-server:
+        condition: service_started
     environment:
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/league_db
       SPRING_DATASOURCE_USERNAME: league_user
       SPRING_DATASOURCE_PASSWORD: league_password
@@ -184,12 +242,18 @@ services:
     ports:
       - "8086:8086"
     depends_on:
-      - postgres
-      - redis
-      - kafka
-      - eureka-server
-      - config-server
+      postgres-schema-fix:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+      kafka:
+        condition: service_started
+      eureka-server:
+        condition: service_started
+      config-server:
+        condition: service_started
     environment:
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/match_db
       SPRING_DATASOURCE_USERNAME: match_user
       SPRING_DATASOURCE_PASSWORD: match_password
@@ -204,12 +268,18 @@ services:
     ports:
       - "8087:8087"
     depends_on:
-      - postgres
-      - redis
-      - kafka
-      - eureka-server
-      - config-server
+      postgres-schema-fix:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+      kafka:
+        condition: service_started
+      eureka-server:
+        condition: service_started
+      config-server:
+        condition: service_started
     environment:
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/scoring_db
       SPRING_DATASOURCE_USERNAME: scoring_user
       SPRING_DATASOURCE_PASSWORD: scoring_password
@@ -224,12 +294,18 @@ services:
     ports:
       - "8088:8088"
     depends_on:
-      - postgres
-      - redis
-      - kafka
-      - eureka-server
-      - config-server
+      postgres-schema-fix:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+      kafka:
+        condition: service_started
+      eureka-server:
+        condition: service_started
+      config-server:
+        condition: service_started
     environment:
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/leaderboard_db
       SPRING_DATASOURCE_USERNAME: leaderboard_user
       SPRING_DATASOURCE_PASSWORD: leaderboard_password
@@ -244,12 +320,18 @@ services:
     ports:
       - "8089:8089"
     depends_on:
-      - postgres
-      - redis
-      - kafka
-      - eureka-server
-      - config-server
+      postgres-schema-fix:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+      kafka:
+        condition: service_started
+      eureka-server:
+        condition: service_started
+      config-server:
+        condition: service_started
     environment:
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/notification_db
       SPRING_DATASOURCE_USERNAME: notification_user
       SPRING_DATASOURCE_PASSWORD: notification_password
