@@ -1,0 +1,250 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{parskip}
+
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+
+\title{\textbf{AEW Fantasy League} \\ Backend Architecture \& Current Build}
+\author{[Your Name]}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+% TODO: Write a short abstract (2--3 sentences) summarizing the project and its architecture.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+%==============================================================================
+\section{Introduction}
+%==============================================================================
+% TODO: Introduce the AEW Fantasy League project, its purpose, and the choice of a microservices backend.
+
+%==============================================================================
+\section{Architecture Overview}
+%==============================================================================
+
+\subsection{Microservices Architecture}
+The system is built as a set of independent Spring Boot microservices, orchestrated via Docker Compose. Service discovery is handled by Netflix Eureka; configuration is centralized in Spring Cloud Config (optional for some services). Client requests enter through an API Gateway.
+
+% TODO: Add an architecture diagram (e.g. draw.io export as PDF) and reference it:
+% \begin{figure}[h]
+%   \centering
+%   \includegraphics[width=\textwidth]{figures/architecture.pdf}
+%   \caption{High-level microservices architecture.}
+%   \label{fig:architecture}
+% \end{figure}
+
+\subsection{Services Summary}
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Service}        & \textbf{Port} & \textbf{Role} \\
+\midrule
+Eureka Server           & 8761 & Service discovery \\
+Config Server           & 8888 & Centralized configuration \\
+API Gateway             & 8080 & Single entry point, routing \\
+Auth Service            & 8081 & Registration, login, JWT \\
+User Service            & 8082 & User profiles and preferences \\
+Wrestler Service        & 8083 & Wrestler catalog and data \\
+Team Service            & 8084 & User fantasy teams \\
+League Service          & ---  & Leagues and competitions \\
+Match Service           & ---  & Match data and events \\
+Scoring Service         & ---  & Fantasy scoring rules and computation \\
+Leaderboard Service     & ---  & Rankings and standings \\
+Notification Service    & ---  & Notifications and alerts \\
+\bottomrule
+\end{tabular}
+\caption{Microservices and their roles.}
+\label{tab:services}
+\end{table}
+
+%==============================================================================
+\section{Technology Stack}
+%==============================================================================
+\begin{itemize}
+\item \textbf{Runtime \& language:} Java 17, Spring Boot 3.4.1
+\item \textbf{Cloud \& discovery:} Spring Cloud 2024.0.0, Netflix Eureka
+\item \textbf{Data:} PostgreSQL 15 (one database per service), JPA/Hibernate, Flyway
+\item \textbf{Caching \& messaging:} Redis 7, Apache Kafka (with Zookeeper)
+\item \textbf{Security:} Spring Security, JWT (e.g. HS512) for auth-service
+\item \textbf{Deployment:} Docker, Docker Compose
+\end{itemize}
+
+% TODO: Add or remove technologies as you finalize the stack.
+
+%==============================================================================
+\section{Infrastructure}
+%==============================================================================
+
+\subsection{Docker Compose}
+All infrastructure and services are defined in a single \texttt{docker-compose.yml}. Key components:
+\begin{itemize}
+\item \textbf{PostgreSQL:} Single instance with multiple databases (e.g. \texttt{auth\_db}, \texttt{user\_db}, \texttt{wrestler\_db}, etc.). A dedicated \texttt{postgres-schema-fix} service runs once after Postgres is healthy to set \texttt{public} schema ownership per database (for PostgreSQL 15+ and Flyway).
+\item \textbf{Redis:} Used for caching and/or session data by services.
+\item \textbf{Zookeeper \& Kafka:} Message broker for event-driven communication between services (e.g. wrestler, team).
+\item \textbf{Eureka, Config Server, API Gateway:} Started before or alongside application services; app services depend on schema-fix completion and optionally on Eureka and Config Server.
+\end{itemize}
+
+\subsection{Database per Service}
+Each microservice has its own PostgreSQL database and dedicated user. Databases and users are created by \texttt{init-databases.sql} in the Postgres container; the schema-fix step ensures the application user owns the \texttt{public} schema so Flyway can create tables.
+
+% TODO: Optionally list database names and users in a small table or bullet list.
+
+%==============================================================================
+\section{Microservices (per service)}
+%==============================================================================
+
+\subsection{Eureka Server}
+% TODO: Describe role (service discovery), port (8761), how other services register and discover each other.
+\begin{itemize}
+\item \textbf{Port:} 8761.
+\item \textbf{Role:} Service discovery; all microservices register and resolve instances here.
+\item % TODO: Add implementation notes, dependencies, dashboard usage.
+\end{itemize}
+
+\subsection{Config Server}
+% TODO: Describe centralized configuration, Git backend, which services use it.
+\begin{itemize}
+\item \textbf{Port:} 8888.
+\item \textbf{Role:} Centralized configuration (e.g. \texttt{file://} or Git repo).
+\item % TODO: Add config repo location, profile strategy, optional vs required for services.
+\end{itemize}
+
+\subsection{API Gateway}
+% TODO: Describe routing, single entry point, possible auth/rate-limiting.
+\begin{itemize}
+\item \textbf{Port:} 8080.
+\item \textbf{Role:} Single entry point; routes requests to auth, user, wrestler, team, etc.
+\item % TODO: Add route rules, CORS, JWT validation at gateway (if any).
+\end{itemize}
+
+\subsection{Auth Service}
+% TODO: Expand with API details, token format, refresh flow.
+\begin{itemize}
+\item \textbf{Port:} 8081.
+\item \textbf{Role:} Registration, login, JWT (access \& refresh). Spring Security + JPA + Flyway.
+\item % TODO: List main endpoints (\texttt{/api/auth/register}, \texttt{/login}, \texttt{/refresh}), entity summary.
+\end{itemize}
+
+\subsection{User Service}
+% TODO: Describe user profiles, preferences, link to auth (user id).
+\begin{itemize}
+\item \textbf{Port:} 8082.
+\item \textbf{Role:} User profiles, preferences, possibly avatar or display name.
+\item % TODO: Main APIs, data model, how it gets user identity (JWT sub, header, etc.).
+\end{itemize}
+
+\subsection{Wrestler Service}
+% TODO: Describe wrestler catalog, stats, how teams reference wrestlers.
+\begin{itemize}
+\item \textbf{Port:} 8083.
+\item \textbf{Role:} Wrestler catalog and metadata (name, roster, stats, etc.).
+\item % TODO: Main entities/APIs, Kafka events if any, used by team and scoring.
+\end{itemize}
+
+\subsection{Team Service}
+% TODO: Describe fantasy team composition, card slots, link to user and wrestlers.
+\begin{itemize}
+\item \textbf{Port:} 8084.
+\item \textbf{Role:} User fantasy teams; which wrestlers/cards a user has in their lineup.
+\item % TODO: Team structure, card types per slot, constraints (salary cap, max cards, etc.).
+\end{itemize}
+
+\subsection{League Service}
+% TODO: Describe leagues, seasons, join/create league, scoring period.
+\begin{itemize}
+\item \textbf{Role:} Leagues and competitions; users join leagues; leagues have scoring periods.
+\item % TODO: Main concepts (league, season, round), APIs, relation to match and leaderboard.
+\end{itemize}
+
+\subsection{Match Service}
+% TODO: Describe match data (real AEW matches), events, outcomes used for scoring.
+\begin{itemize}
+\item \textbf{Role:} Match data and events (real AEW matches); outcomes, participants, match type.
+\item % TODO: How matches are ingested/stored, events published to Kafka, consumed by scoring.
+\end{itemize}
+
+\subsection{Scoring Service}
+% TODO: Describe how match outcomes are turned into fantasy points, rules engine.
+\begin{itemize}
+\item \textbf{Role:} Fantasy scoring rules and computation; consumes match events, applies rules, produces points per user/team.
+\item % TODO: Inputs (match result, card type, etc.), formula references, output (points per roster/card).
+\end{itemize}
+
+\subsection{Leaderboard Service}
+% TODO: Describe rankings, per-league standings, aggregation of scores.
+\begin{itemize}
+\item \textbf{Role:} Rankings and standings; aggregates scores per user/team per league/period.
+\item % TODO: How it gets scores (from scoring service or own DB), ranking logic, APIs.
+\end{itemize}
+
+\subsection{Notification Service}
+% TODO: Describe notifications (match results, league updates, etc.), channels.
+\begin{itemize}
+\item \textbf{Role:} Notifications and alerts (e.g. match results, league updates, reminders).
+\item % TODO: Channels (email, push, in-app), events it subscribes to (Kafka or HTTP).
+\end{itemize}
+
+%==============================================================================
+\section{Match points calculation}
+%==============================================================================
+% TODO: Define how match points are calculated in general (e.g. base points per match outcome, bonuses, match-type multipliers).
+\begin{itemize}
+\item % TODO: Base points for win / loss / draw (or N/A).
+\item % TODO: Bonuses (e.g. pinfall, submission, DQ, time limit).
+\item % TODO: Match type modifiers (singles, tag, battle royal, etc.).
+\item % TODO: Formula summary or reference to scoring service rules.
+\end{itemize}
+
+%==============================================================================
+\section{Types of fantasy cards}
+%==============================================================================
+% TODO: List and define each type of fantasy card (e.g. Wrestler card, Match-type card, Special card, etc.).
+\begin{itemize}
+\item \textbf{Card type 1:} % TODO: Name and short description (e.g. Standard wrestler card).
+\item \textbf{Card type 2:} % TODO: Name and short description.
+\item \textbf{Card type 3:} % TODO: Name and short description.
+\item % TODO: Add more card types as needed.
+\end{itemize}
+
+%==============================================================================
+\section{Points per fantasy card type}
+%==============================================================================
+% TODO: For each card type defined above, specify how points are calculated (e.g. same as match points, multiplier, or custom rule).
+\begin{itemize}
+\item \textbf{Card type 1:} % TODO: How points are calculated for this card (formula or rule).
+\item \textbf{Card type 2:} % TODO: How points are calculated for this card.
+\item \textbf{Card type 3:} % TODO: How points are calculated for this card.
+\item % TODO: Add one item per card type; you can use a small table instead if preferred.
+\end{itemize}
+
+%==============================================================================
+\section{Development Workflow}
+%==============================================================================
+% TODO: Describe how you start the stack and develop (e.g. infra in Docker, auth-service run locally with Maven or IDE).
+Recommended order for development:
+\begin{enumerate}
+\item Start infrastructure: Postgres (and schema-fix), Redis, Eureka, optionally Config Server.
+\item Run and develop Auth Service first (register, login, JWT).
+\item Implement User Service, then domain services (Wrestler, Team, League, Match, Scoring, Leaderboard, Notification) as needed.
+\end{enumerate}
+
+%==============================================================================
+\section{Conclusion and Future Work}
+%==============================================================================
+% TODO: Summarize the current state and outline next steps (e.g. complete user-service, add API Gateway routes, integrate scoring and leaderboard, frontend, tests, production considerations).
+
+\end{document}

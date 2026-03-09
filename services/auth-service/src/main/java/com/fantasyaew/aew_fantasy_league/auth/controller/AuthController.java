@@ -52,7 +52,6 @@ public class AuthController {
     public ResponseEntity<Boolean> validateToken(@RequestHeader("Authorization") String token) {
         try {
             String jwtToken = token.substring(7); // Remove "Bearer " prefix
-            // Token validation is handled by the security filter
             return ResponseEntity.ok(true);
         } catch (Exception e) {
             return ResponseEntity.ok(false);

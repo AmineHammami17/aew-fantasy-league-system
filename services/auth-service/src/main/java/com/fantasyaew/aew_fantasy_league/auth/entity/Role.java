@@ -27,6 +27,7 @@ public class Role {
 
     public enum RoleType {
         USER,
-        ADMIN
+        ADMIN,
+        MEMBER
     }
 }

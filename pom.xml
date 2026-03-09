@@ -34,6 +34,7 @@
 		<module>services/scoring-service</module>
 		<module>services/leaderboard-service</module>
 		<module>services/notification-service</module>
+		<module>services/championship-service</module>
 	</modules>
 
 	<dependencyManagement>

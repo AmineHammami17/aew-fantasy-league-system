@@ -11,6 +11,7 @@ CREATE DATABASE match_db;
 CREATE DATABASE scoring_db;
 CREATE DATABASE leaderboard_db;
 CREATE DATABASE notification_db;
+CREATE DATABASE championship_db;
 
 -- Create users and grant permissions
 CREATE USER auth_user WITH PASSWORD 'auth_password';
@@ -22,6 +23,7 @@ CREATE USER match_user WITH PASSWORD 'match_password';
 CREATE USER scoring_user WITH PASSWORD 'scoring_password';
 CREATE USER leaderboard_user WITH PASSWORD 'leaderboard_password';
 CREATE USER notification_user WITH PASSWORD 'notification_password';
+CREATE USER championship_user WITH PASSWORD 'championship_password';
 
 -- Grant database permissions
 GRANT ALL PRIVILEGES ON DATABASE auth_db TO auth_user;
@@ -33,6 +35,7 @@ GRANT ALL PRIVILEGES ON DATABASE match_db TO match_user;
 GRANT ALL PRIVILEGES ON DATABASE scoring_db TO scoring_user;
 GRANT ALL PRIVILEGES ON DATABASE leaderboard_db TO leaderboard_user;
 GRANT ALL PRIVILEGES ON DATABASE notification_db TO notification_user;
+GRANT ALL PRIVILEGES ON DATABASE championship_db TO championship_user;
 
 -- PostgreSQL 15+: make each app user owner of schema public (required for Flyway to create tables)
 \c auth_db postgres
@@ -61,3 +64,6 @@ ALTER SCHEMA public OWNER TO leaderboard_user;
 
 \c notification_db postgres
 ALTER SCHEMA public OWNER TO notification_user;
+
+\c championship_db postgres
+ALTER SCHEMA public OWNER TO championship_user;

@@ -37,7 +37,7 @@ done
 echo "Connected."
 
 ok=0
-for pair in "auth_db:auth_user" "user_db:user_user" "wrestler_db:wrestler_user" "team_db:team_user" "league_db:league_user" "match_db:match_user" "scoring_db:scoring_user" "leaderboard_db:leaderboard_user" "notification_db:notification_user"; do
+for pair in "auth_db:auth_user" "user_db:user_user" "wrestler_db:wrestler_user" "team_db:team_user" "league_db:league_user" "match_db:match_user" "scoring_db:scoring_user" "leaderboard_db:leaderboard_user" "notification_db:notification_user" "championship_db:championship_user"; do
   db="${pair%%:*}"
   usr="${pair##*:}"
   echo "Setting schema public owner for $db to $usr ..."

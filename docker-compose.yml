@@ -340,6 +340,32 @@ services:
     networks:
       - aew-network
 
+  championship-service:
+    build: ./services/championship-service
+    container_name: aew-championship-service
+    ports:
+      - "8090:8090"
+    depends_on:
+      postgres-schema-fix:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+      kafka:
+        condition: service_started
+      eureka-server:
+        condition: service_started
+      config-server:
+        condition: service_started
+    environment:
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/championship_db
+      SPRING_DATASOURCE_USERNAME: championship_user
+      SPRING_DATASOURCE_PASSWORD: championship_password
+      SPRING_REDIS_HOST: redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    networks:
+      - aew-network
+
 volumes:
   postgres_data:
   redis_data:
