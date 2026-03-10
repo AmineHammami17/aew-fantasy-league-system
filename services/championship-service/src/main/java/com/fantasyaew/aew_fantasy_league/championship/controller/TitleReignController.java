@@ -29,4 +29,9 @@ public class TitleReignController {
     public List<TitleReignDto> getByChampionship(@PathVariable UUID championshipId) {
         return titleReignService.getByChampionship(championshipId);
     }
+
+    @GetMapping("/current-reign")
+    public TitleReignDto getCurrentByChampionship(@PathVariable UUID championshipId) {
+        return titleReignService.getCurrentByChampionship(championshipId);
+    }
 }

@@ -46,6 +46,20 @@ public class TitleReignService {
                 .collect(Collectors.toList());
     }
 
+    public TitleReignDto getCurrentByChampionship(UUID championshipId) {
+        TitleReign reign = titleReignRepository
+                .findFirstByChampionship_IdAndIsCurrentTrueOrderByStartDateDesc(championshipId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Current reign not found"));
+        return toDto(reign);
+    }
+
+    public List<TitleReignDto> getByWrestler(UUID wrestlerId) {
+        return titleReignRepository.findByWrestlerIdOrderByStartDateDesc(wrestlerId)
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
     private TitleReignDto toDto(TitleReign reign) {
         return TitleReignDto.builder()
                 .id(reign.getId())

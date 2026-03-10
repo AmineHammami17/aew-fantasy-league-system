@@ -1,6 +1,12 @@
 package com.fantasyaew.aew_fantasy_league.championship.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,7 +27,7 @@ public class TitleReign {
     @Id
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(optional = false)
     @JoinColumn(name = "championship_id", nullable = false)
     private Championship championship;
 
@@ -35,8 +41,7 @@ public class TitleReign {
     private LocalDate endDate;
 
     @Column(name = "is_current", nullable = false)
-    @Builder.Default
-    private boolean isCurrent = false;
+    private boolean isCurrent;
 
     @Column(name = "defense_count", nullable = false)
     private int defenseCount;
@@ -46,9 +51,12 @@ public class TitleReign {
 
     @PrePersist
     protected void onCreate() {
-        this.createdAt = Instant.now();
         if (this.id == null) {
             this.id = UUID.randomUUID();
         }
+        if (this.createdAt == null) {
+            this.createdAt = Instant.now();
+        }
     }
 }
+

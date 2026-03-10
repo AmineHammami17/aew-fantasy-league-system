@@ -1,4 +1,4 @@
-package com.fantasyaew.aew_fantasy_league.championship.entity;
+package com.fantasyaew.aew_fantasy_league.wrestler.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -14,21 +14,44 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
-@Table(name = "championships")
+@Table(name = "wrestlers")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Championship {
+public class Wrestler {
 
     @Id
     private UUID id;
 
+    @Column(name = "ring_name", nullable = false)
+    private String ringName;
+
+    @Column(name = "real_name")
+    private String realName;
+
+    @Column
+    private String nickname;
+
     @Column(nullable = false)
-    private String name;
+    @Enumerated(EnumType.STRING)
+    private Gender gender;
+
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
+
+    @Column
+    private String country;
+
+    @Column(name = "height_cm")
+    private Integer heightCm;
+
+    @Column(name = "weight_kg")
+    private Integer weightKg;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -38,18 +61,31 @@ public class Championship {
     @Column(nullable = false)
     private Division division;
 
-    @Column(name = "belt_image_url", nullable = false, length = 500)
-    private String beltImageUrl;
+    @Column(name = "wrestling_style")
+    private String wrestlingStyle;
 
-    @Column(name = "logo_image_url", length = 500)
-    private String logoImageUrl;
+    @Enumerated(EnumType.STRING)
+    @Column
+    private Alignment alignment;
 
-    @Column(nullable = false)
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
+    @Column(name = "injury_status")
+    private String injuryStatus;
+
+    @Column
+    private String suspension;
+
+    @Column(name = "career_wins")
+    private Integer careerWins;
+
+    @Column(name = "career_losses")
+    private Integer careerLosses;
+
+    @Column(name = "popularity_score", nullable = false)
     @Builder.Default
-    private boolean active = true;
-
-    @Column(name = "prestige_level", nullable = false)
-    private int prestigeLevel;
+    private int popularityScore = 0;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -72,6 +108,12 @@ public class Championship {
         this.updatedAt = Instant.now();
     }
 
+    public enum Gender {
+        MALE,
+        FEMALE,
+        OTHER
+    }
+
     public enum Promotion {
         AEW,
         NJPW,
@@ -87,4 +129,11 @@ public class Championship {
         TRIOS,
         OTHER
     }
+
+    public enum Alignment {
+        FACE,
+        HEEL,
+        TWEENER
+    }
 }
+
