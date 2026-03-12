@@ -1,0 +1,23 @@
+CREATE TABLE wrestlers (
+    id UUID PRIMARY KEY,
+    ring_name VARCHAR(255) NOT NULL,
+    real_name VARCHAR(255),
+    nickname VARCHAR(255),
+    gender VARCHAR(20) NOT NULL,
+    date_of_birth DATE,
+    country VARCHAR(100),
+    height_cm INT,
+    weight_kg INT,
+    promotion VARCHAR(50) NOT NULL,
+    division VARCHAR(50) NOT NULL,
+    wrestling_style VARCHAR(255),
+    alignment VARCHAR(20),
+    image_url VARCHAR(500),
+    injury_status VARCHAR(255),
+    suspension VARCHAR(255),
+    career_wins INT,
+    career_losses INT,
+    popularity_score INT DEFAULT 0 NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP
+);
